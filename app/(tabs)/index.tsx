@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Camera } from 'expo-camera';
+import { Camera, CameraView } from 'expo-camera';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import AuthService from '../../src/services/auth';
@@ -19,16 +19,52 @@ export default function ScanScreen() {
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
+    console.log('Scanned data:', data);
 
-    if (data.startsWith('lgin://')) {
-      // Handle website login QR code
-      await handleWebsiteLogin(data);
-    } else if (data.startsWith('peer://')) {
-      // Handle peer-to-peer QR code
-      await handlePeerScan(data);
-    } else {
-      // Handle regular QR code
+    let parsedData;
+
+    try {
+      parsedData = JSON.parse(data); // Try parsing if it's a JSON string
+    } catch (e) {
+      console.warn('Invalid QR data format. Treating as a regular scan.');
       await handleRegularScan(data);
+      setTimeout(() => setScanned(false), 2000);
+      return;
+    }
+
+    // Check for missing or unexpected values
+    if (!parsedData.type || typeof parsedData.type !== 'string') {
+      console.warn(
+        'Missing or invalid type field. Treating as a regular scan.'
+      );
+      await handleRegularScan(data);
+      setTimeout(() => setScanned(false), 2000);
+      return;
+    }
+
+    switch (parsedData.type) {
+      case 'login':
+        if (
+          !parsedData.session_id ||
+          typeof parsedData.session_id !== 'string'
+        ) {
+          console.warn('Missing or invalid session_id for login.');
+          await handleRegularScan(data);
+        } else {
+          await handleWebsiteLogin(parsedData.session_id);
+        }
+        break;
+
+      case 'peer':
+        await handlePeerScan(data);
+        break;
+
+      default:
+        console.warn(
+          `Unknown QR type: ${parsedData.type}. Treating as a regular scan.`
+        );
+        await handleRegularScan(data);
+        break;
     }
 
     setTimeout(() => setScanned(false), 2000);
@@ -36,7 +72,7 @@ export default function ScanScreen() {
 
   const handleWebsiteLogin = async (data: string) => {
     try {
-      const sessionId = data.replace('lgin://', '');
+      const sessionId = data; //.replace('lgin-', '');
       const response = await AuthService.completeQRLogin(sessionId);
       console.log('Login success:', response);
       // TODO: Show success feedback to user
@@ -94,17 +130,22 @@ export default function ScanScreen() {
     }
   };
 
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
     const R = 6371e3; // Earth's radius in meters
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in meters
   };
@@ -135,9 +176,10 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.container}>
-      <Camera
+      <CameraView
         style={styles.camera}
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
       >
         <LinearGradient
           colors={['rgba(0,0,0,0.8)', 'transparent', 'rgba(0,0,0,0.8)']}
@@ -146,7 +188,7 @@ export default function ScanScreen() {
         <View style={styles.overlay}>
           <View style={styles.scanArea} />
         </View>
-      </Camera>
+      </CameraView>
     </View>
   );
 }

@@ -84,10 +84,13 @@ class AuthService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.token}`,
+          Authorization: `Bearer ${this.token}`,
         },
         body: JSON.stringify({ session_id: sessionId }),
       });
+      console.log('my token:', this.token);
+      console.log(JSON.stringify({ session_id: sessionId }));
+      console.log('qr-login-complete response:', response.status);
 
       if (!response.ok) {
         throw new Error('QR login completion failed');
