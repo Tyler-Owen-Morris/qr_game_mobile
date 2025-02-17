@@ -6,6 +6,9 @@ export interface QRScanResponse {
   status: string;
   message?: string;
   data?: any;
+  location_valid?: boolean;
+  encounter_type?: string;
+  reward_data?: any;
 }
 
 class QRService {

@@ -147,7 +147,7 @@ export default function ScanScreen() {
       } else {
         switch (response?.encounter_type) {
           case 'item_drop':
-            message = `You have found a ${response?.reward_data?.destination}.`;
+            message = `You have found ${response?.reward_data?.item_name}.`;
             break;
           case 'transportation':
             message = `You have been transported to ${response?.reward_data?.destination}.`;
@@ -195,6 +195,7 @@ export default function ScanScreen() {
   const closeModal = () => {
     setModalVisible(false);
     setScanned(false);
+    AuthService.getPlayerData();
   };
 
   if (hasPermission === null) {

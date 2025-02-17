@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import AuthService from '@/src/services/auth';
 
 export default function ProfileScreen() {
   // TODO: Replace with actual user data
@@ -8,6 +10,16 @@ export default function ProfileScreen() {
     discoveredCodes: 15,
     peerConnections: 7,
   };
+  const [player, setPlayer] = useState<any | null>(null);
+
+  useEffect(() => {
+    const loadPlayer = async () => {
+      const player_data = await AuthService.getPlayerData();
+      setPlayer(player_data);
+      console.log('playerdata:', player_data);
+    };
+    loadPlayer();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -17,24 +29,36 @@ export default function ProfileScreen() {
       >
         <View style={styles.profileInfo}>
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400' }}
+            source={{
+              uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400',
+            }}
             style={styles.avatar}
           />
-          <Text style={styles.username}>Explorer #1234</Text>
+          {player ? (
+            <Text style={styles.username}>{player.username}</Text>
+          ) : (
+            <></>
+          )}
         </View>
       </LinearGradient>
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.scannedCodes}</Text>
+          <Text style={styles.statNumber}>
+            {player ? player.scan_counts?.total : 0}
+          </Text>
           <Text style={styles.statLabel}>Scanned</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.discoveredCodes}</Text>
+          <Text style={styles.statNumber}>
+            {player ? player.scan_counts?.discovery : 0}
+          </Text>
           <Text style={styles.statLabel}>Discovered</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.peerConnections}</Text>
+          <Text style={styles.statNumber}>
+            {player ? player.scan_counts?.peers : 0}
+          </Text>
           <Text style={styles.statLabel}>Peers</Text>
         </View>
       </View>
