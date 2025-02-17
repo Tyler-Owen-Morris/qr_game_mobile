@@ -1,13 +1,23 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  Modal,
+  TouchableOpacity,
+} from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import AuthService from '../../src/services/auth';
+import QRService from '@/src/services/qr';
 
 export default function ScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [scanMessage, setScanMessage] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -19,6 +29,7 @@ export default function ScanScreen() {
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
+    // setScanActive(true);
     console.log('Scanned data:', data);
 
     let parsedData;
@@ -28,7 +39,7 @@ export default function ScanScreen() {
     } catch (e) {
       console.warn('Invalid QR data format. Treating as a regular scan.');
       await handleRegularScan(data);
-      setTimeout(() => setScanned(false), 2000);
+      // setTimeout(() => setScanned(false), 2000);
       return;
     }
 
@@ -38,7 +49,7 @@ export default function ScanScreen() {
         'Missing or invalid type field. Treating as a regular scan.'
       );
       await handleRegularScan(data);
-      setTimeout(() => setScanned(false), 2000);
+      // setTimeout(() => setScanned(false), 2000);
       return;
     }
 
@@ -67,7 +78,7 @@ export default function ScanScreen() {
         break;
     }
 
-    setTimeout(() => setScanned(false), 2000);
+    //setTimeout(() => setScanned(false), 2000);
   };
 
   const handleWebsiteLogin = async (data: string) => {
@@ -123,10 +134,37 @@ export default function ScanScreen() {
 
   const handleRegularScan = async (data: string) => {
     try {
-      // TODO: Send regular scan to server
       console.log('Regular scan:', data);
+      const response = await QRService.scanQRCode(data);
+      console.log('response:', response);
+      console.log('valid loc:', response?.location_valid);
+
+      let message = 'This QR code is mysterious and unknown to the system.';
+
+      if (!response?.location_valid) {
+        message =
+          'You are not in the correct location to get the rewards for this code.';
+      } else {
+        switch (response?.encounter_type) {
+          case 'item_drop':
+            message = `You have found a ${response?.reward_data?.destination}.`;
+            break;
+          case 'transportation':
+            message = `You have been transported to ${response?.reward_data?.destination}.`;
+            break;
+          case 'encounter':
+            let r_dat = response?.reward_data;
+            message = `You have encountered a level ${r_dat?.difficulty_level} of type ${r_dat?.puzzle_type}`;
+            break;
+        }
+      }
+
+      setScanMessage(message);
+      showModal();
     } catch (error) {
       console.error('Error during regular scan:', error);
+      setScanMessage('An error occurred while scanning. Please try again.');
+      showModal();
     }
   };
 
@@ -148,6 +186,15 @@ export default function ScanScreen() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in meters
+  };
+
+  const showModal = () => {
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setScanned(false);
   };
 
   if (hasPermission === null) {
@@ -189,6 +236,16 @@ export default function ScanScreen() {
           <View style={styles.scanArea} />
         </View>
       </CameraView>
+      <Modal animationType="slide" transparent={true} visible={modalVisible}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>{scanMessage}</Text>
+            <TouchableOpacity style={styles.button} onPress={closeModal}>
+              <Text style={styles.buttonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -221,5 +278,33 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     backgroundColor: 'transparent',
     borderRadius: 12,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContent: {
+    width: 300,
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
