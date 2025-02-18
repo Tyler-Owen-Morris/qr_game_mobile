@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ export default function ScanScreen() {
   const [scanned, setScanned] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
+  const scannedRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -27,7 +28,8 @@ export default function ScanScreen() {
   }, []);
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
-    if (scanned) return;
+    if (scannedRef.current) return;
+    scannedRef.current = true;
     setScanned(true);
     // setScanActive(true);
     console.log('Scanned data:', data);
@@ -79,6 +81,10 @@ export default function ScanScreen() {
     }
 
     //setTimeout(() => setScanned(false), 2000);
+    setTimeout(() => {
+      scannedRef.current = false; // Unlock after a delay
+      setScanned(false);
+    }, 2000);
   };
 
   const handleWebsiteLogin = async (data: string) => {
@@ -195,6 +201,7 @@ export default function ScanScreen() {
   const closeModal = () => {
     setModalVisible(false);
     setScanned(false);
+    scannedRef.current = false;
     AuthService.getPlayerData();
   };
 

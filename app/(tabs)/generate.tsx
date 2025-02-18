@@ -3,6 +3,8 @@ import { View, StyleSheet, Platform, Text } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Location from 'expo-location';
 import WebSocketService from '../../src/services/websocket';
+import QRService from '@/src/services/qr';
+import { calculateDistance } from '@/utils/location';
 
 export default function GenerateScreen() {
   const [qrData, setQrData] = useState<string>('');
@@ -14,7 +16,7 @@ export default function GenerateScreen() {
     // Connect to WebSocket for peer notifications
     if (Platform.OS !== 'web') {
       WebSocketService.connect();
-      
+
       const handleMessage = (data: any) => {
         if (data.event === 'player_interaction') {
           setPeerStatus(data.message || 'Peer connection successful!');
