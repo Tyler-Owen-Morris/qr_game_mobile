@@ -31,71 +31,92 @@ export default function ScanScreen() {
     if (scannedRef.current) return;
     scannedRef.current = true;
     setScanned(true);
-    // setScanActive(true);
     console.log('Scanned data:', data);
 
-    let parsedData;
-
     try {
-      parsedData = JSON.parse(data); // Try parsing if it's a JSON string
-    } catch (e) {
-      console.warn('Invalid QR data format. Treating as a regular scan.');
-      await handleRegularScan(data);
-      // setTimeout(() => setScanned(false), 2000);
-      return;
-    }
-
-    // Check for missing or unexpected values
-    if (!parsedData.type || typeof parsedData.type !== 'string') {
-      console.warn(
-        'Missing or invalid type field. Treating as a regular scan.'
-      );
-      await handleRegularScan(data);
-      // setTimeout(() => setScanned(false), 2000);
-      return;
-    }
-
-    switch (parsedData.type) {
-      case 'login':
-        if (
-          !parsedData.session_id ||
-          typeof parsedData.session_id !== 'string'
-        ) {
-          console.warn('Missing or invalid session_id for login.');
-          await handleRegularScan(data);
-        } else {
-          await handleWebsiteLogin(parsedData.session_id);
-        }
-        break;
-
-      case 'peer':
+      // Prefix-based type detection
+      if (data.startsWith('https://qrhunter.com/item/')) {
+        await handleGameItemScan(data);
+      } else if (data.startsWith('https://qrhunter.com/encounter/')) {
+        await handleGameEncounterScan(data);
+      } else if (data.startsWith('arg://peer.')) {
         await handlePeerScan(data);
-        break;
-
-      default:
-        console.warn(
-          `Unknown QR type: ${parsedData.type}. Treating as a regular scan.`
-        );
+      } else if (data.startsWith('arg://login.')) {
+        await handleLoginScan(data);
+      } else if (data.startsWith('arg://secure.')) {
+        await handleEncryptedScan(data); // Placeholder for future
+      } else {
+        // Default to public/commercial QR codes
         await handleRegularScan(data);
-        break;
+      }
+    } catch (error) {
+      console.error('Error handling QR scan:', error);
+      setScanMessage('An error occurred while scanning. Please try again.');
+      showModal();
+    } finally {
+      setTimeout(() => {
+        scannedRef.current = false;
+        setScanned(false);
+      }, 2000);
     }
-
-    //setTimeout(() => setScanned(false), 2000);
-    setTimeout(() => {
-      scannedRef.current = false; // Unlock after a delay
-      setScanned(false);
-    }, 2000);
   };
 
-  const handleWebsiteLogin = async (data: string) => {
+  const handleLoginScan = async (data: string) => {
     try {
-      const sessionId = data; //.replace('lgin-', '');
+      const sessionId = data.replace('arg://login.', '');
       const response = await AuthService.completeQRLogin(sessionId);
       console.log('Login success:', response);
-      // TODO: Show success feedback to user
+      setScanMessage('Login successful!');
+      showModal();
     } catch (error) {
       console.error('Login failed:', error);
-      // TODO: Show error feedback to user
+      setScanMessage('Login failed. Please try again.');
+      showModal();
+    }
+  };
+
+  const handleGameItemScan = async (data: string) => {
+    try {
+      const response = await QRService.scanQRCode(data); // Reuse existing method
+      if (
+        response.status === 'success' &&
+        response.encounter_type === 'item_drop'
+      ) {
+        setScanMessage(
+          `You found ${response.reward_data?.item_name || 'an item'}!`
+        );
+      } else {
+        setScanMessage(response.message || 'Invalid item QR code.');
+      }
+      showModal();
+    } catch (error) {
+      console.error('Error during item scan:', error);
+      setScanMessage('Error scanning item QR code.');
+      showModal();
+    }
+  };
+
+  const handleGameEncounterScan = async (data: string) => {
+    try {
+      const response = await QRService.scanQRCode(data); // Reuse existing method
+      if (
+        response.status === 'success' &&
+        response.encounter_type === 'encounter'
+      ) {
+        const { difficulty_level, puzzle_type } = response.reward_data || {};
+        setScanMessage(
+          `Encounter started! Level ${difficulty_level || 'unknown'} ${
+            puzzle_type || ''
+          }.`
+        );
+      } else {
+        setScanMessage(response.message || 'Invalid encounter QR code.');
+      }
+      showModal();
+    } catch (error) {
+      console.error('Error during encounter scan:', error);
+      setScanMessage('Error scanning encounter QR code.');
+      showModal();
     }
   };
 
@@ -103,7 +124,8 @@ export default function ScanScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.error('Location permission denied');
+        setScanMessage('Location permission is required to scan peer codes.');
+        showModal();
         return;
       }
 
@@ -111,31 +133,32 @@ export default function ScanScreen() {
         accuracy: Location.Accuracy.High,
       });
 
-      // Extract coordinates from peer code
-      const [peerLat, peerLng] = data
-        .replace('peer://', '')
-        .split(',')
-        .map(Number);
+      const { latitude, longitude } = location.coords;
 
-      // Calculate distance between points
-      const distance = calculateDistance(
-        location.coords.latitude,
-        location.coords.longitude,
-        peerLat,
-        peerLng
+      // Send to backend for validation
+      const response = await QRService.validatePeerQR(
+        data,
+        latitude,
+        longitude
       );
 
-      if (distance > 100) {
-        console.error('Too far from peer');
-        // TODO: Show distance error to user
-        return;
+      if (response.status === 'success') {
+        setScanMessage(`Match Success!\n\n${response.message || 'unknown'}.`);
+      } else {
+        setScanMessage(response.message || 'Failed to match peer.');
       }
-
-      // TODO: Send peer scan to server
-      console.log('Valid peer scan:', { data, location });
+      showModal();
     } catch (error) {
       console.error('Error during peer scan:', error);
+      setScanMessage('An error occurred while scanning the peer code.');
+      showModal();
     }
+  };
+
+  const handleEncryptedScan = async (data: string) => {
+    // TODO: Implement when encrypted QR codes are fully specified
+    setScanMessage('Encrypted QR codes are not yet supported.');
+    showModal();
   };
 
   const handleRegularScan = async (data: string) => {
@@ -172,26 +195,6 @@ export default function ScanScreen() {
       setScanMessage('An error occurred while scanning. Please try again.');
       showModal();
     }
-  };
-
-  const calculateDistance = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number => {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c; // Distance in meters
   };
 
   const showModal = () => {

@@ -15,6 +15,12 @@ export interface PeerQRResponse {
   peer_qr: string;
 }
 
+export interface PeerScanResponse {
+  status: string; // "success" or "error"
+  message?: string; // e.g., "Peer matched!" or "Invalid code"
+  matched_player_id?: string; // ID of the matched player, if successful
+}
+
 class QRService {
   static async scanQRCode(qrCode: string): Promise<QRScanResponse> {
     const token = AuthService.getToken();
@@ -55,7 +61,7 @@ class QRService {
       throw new Error('Unauthorized: No auth token found');
     }
     try {
-      const response = await fetch(`${API_URL}/peer_scan/generate`, {
+      const response = await fetch(`${API_URL}/player/peer_scan/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,6 +81,41 @@ class QRService {
       return await response.json();
     } catch (error) {
       console.error('Error generating peer QR:', error);
+      throw error;
+    }
+  }
+  static async validatePeerQR(
+    qrCode: string,
+    latitude: number,
+    longitude: number
+  ): Promise<PeerScanResponse> {
+    const token = AuthService.getToken();
+    if (!token) {
+      throw new Error('Unauthorized: No auth token found');
+    }
+    try {
+      const response = await fetch(`${API_URL}/peer_scan/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          peer_qr: qrCode,
+          latitude,
+          longitude,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Peer QR validation failed with status: ${response.status}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error validating peer QR:', error);
       throw error;
     }
   }
