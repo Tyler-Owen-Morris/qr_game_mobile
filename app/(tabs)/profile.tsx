@@ -1,16 +1,30 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  FlatList,
+  ActivityIndicator,
+} from 'react-native';
 import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import AuthService from '@/src/services/auth';
+import { useScanHistory } from '@/src/context/ScanHistoryContext';
+import ScanItem from '@/src/components/ScanItem';
 
 export default function ProfileScreen() {
-  // TODO: Replace with actual user data
-  const stats = {
-    scannedCodes: 42,
-    discoveredCodes: 15,
-    peerConnections: 7,
-  };
   const [player, setPlayer] = useState<any | null>(null);
+  const { scans, total, loading, fetchScans } = useScanHistory();
+
+  useEffect(() => {
+    fetchScans(true); // Initial fetch, reset state
+  }, [fetchScans]);
+
+  const loadMore = () => {
+    if (!loading && scans.length < total) {
+      fetchScans(); // Fetch next page
+    }
+  };
 
   useEffect(() => {
     const loadPlayer = async () => {
@@ -62,6 +76,23 @@ export default function ProfileScreen() {
           <Text style={styles.statLabel}>Peers</Text>
         </View>
       </View>
+
+      <View style={styles.historyContainer}>
+        <Text style={styles.historyHeader}>Scan History</Text>
+        <FlatList
+          data={scans}
+          renderItem={({ item }) => <ScanItem scan={item} />}
+          keyExtractor={(item, index) => `${item.scan_time}-${index}`}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loading ? <ActivityIndicator size="large" color="#4c669f" /> : null
+          }
+          showsVerticalScrollIndicator={true}
+          horizontal={false}
+          contentContainerStyle={styles.flatListContent}
+        />
+      </View>
     </View>
   );
 }
@@ -105,10 +136,7 @@ const styles = StyleSheet.create({
     width: '30%',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
@@ -122,5 +150,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 5,
+  },
+  historyContainer: {
+    flex: 1, // Takes remaining space
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  historyHeader: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+  flatListContent: {
+    paddingBottom: 20, // Space at bottom for scrolling
   },
 });

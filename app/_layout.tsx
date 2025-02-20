@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AuthService from '../src/services/auth';
+import { ScanHistoryProvider } from '@/src/context/ScanHistoryContext';
 
 declare global {
   interface Window {
@@ -12,7 +13,7 @@ declare global {
 export default function RootLayout() {
   useEffect(() => {
     window.frameworkReady?.();
-    
+
     // Create anonymous user on app start
     const initializeUser = async () => {
       try {
@@ -27,10 +28,12 @@ export default function RootLayout() {
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
+      <ScanHistoryProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="auto" />
+      </ScanHistoryProvider>
     </>
   );
 }

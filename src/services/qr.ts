@@ -94,7 +94,7 @@ class QRService {
       throw new Error('Unauthorized: No auth token found');
     }
     try {
-      const response = await fetch(`${API_URL}/peer_scan/validate`, {
+      const response = await fetch(`${API_URL}/player/peer_scan/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
