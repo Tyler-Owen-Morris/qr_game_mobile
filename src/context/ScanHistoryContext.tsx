@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+} from 'react';
 import AuthService from '../services/auth'; // Adjust path as needed
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -33,11 +39,21 @@ export const ScanHistoryProvider: React.FC<{ children: React.ReactNode }> = ({
   const [skip, setSkip] = useState(0);
   const [limit] = useState(10); // Fixed page size
   const [loading, setLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
   const fetchScans = useCallback(
     async (reset: boolean = false) => {
-      if (loading || (skip >= total && !reset)) return; // No more to fetch unless resetting
+      if (isFetchingRef.current || (skip >= total && !reset)) {
+        console.log('Fetch skipped:', {
+          isFetching: isFetchingRef.current,
+          skip,
+          total,
+          reset,
+        });
+        return;
+      }
 
+      isFetchingRef.current = true;
       setLoading(true);
       try {
         const token = await AuthService.getToken(); // Assuming this exists
@@ -60,6 +76,9 @@ export const ScanHistoryProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (error) {
         console.error('Error fetching scans:', error);
       } finally {
+        setTimeout(() => {
+          isFetchingRef.current = false;
+        }, 1000);
         setLoading(false);
       }
     },

@@ -1,4 +1,5 @@
 import AuthService from './auth';
+import * as Location from 'expo-location';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -29,6 +30,10 @@ class QRService {
     }
     try {
       console.log('token:', token);
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High, // Adjust accuracy as needed
+      });
+      const { latitude, longitude } = location.coords;
       const response = await fetch(`${API_URL}/qr/scan`, {
         method: 'POST',
         headers: {
@@ -37,8 +42,8 @@ class QRService {
         },
         body: JSON.stringify({
           qr_code: qrCode,
-          latitude: 37.7749,
-          longitude: -122.4194,
+          latitude: latitude,
+          longitude: longitude,
         }),
       });
 

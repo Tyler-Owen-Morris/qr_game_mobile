@@ -13,8 +13,6 @@ declare global {
 export default function RootLayout() {
   useEffect(() => {
     window.frameworkReady?.();
-
-    // Create anonymous user on app start
     const initializeUser = async () => {
       try {
         await AuthService.createAnonymousUser();
@@ -22,18 +20,17 @@ export default function RootLayout() {
         console.error('Failed to initialize user:', error);
       }
     };
-
     initializeUser();
   }, []);
 
   return (
-    <>
-      <ScanHistoryProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </ScanHistoryProvider>
-    </>
+    <ScanHistoryProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="huntscreen" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style="auto" />
+    </ScanHistoryProvider>
   );
 }

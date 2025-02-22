@@ -12,13 +12,19 @@ import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import AuthService from '../../src/services/auth';
 import QRService from '@/src/services/qr';
+import { router, useLocalSearchParams } from 'expo-router';
 
 export default function ScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [scanned, setScanned] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [scanMessage, setScanMessage] = useState('');
+  const [scanned, setScanned] = useState<boolean>(false);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [scanMessage, setScanMessage] = useState<string | null>('');
+  const [huntId, setHuntId] = useState<string | null>(null);
   const scannedRef = useRef(false);
+  const { isHuntScan, huntId: paramHuntId } = useLocalSearchParams<{
+    isHuntScan?: string;
+    huntId?: string;
+  }>();
 
   useEffect(() => {
     (async () => {
@@ -29,9 +35,19 @@ export default function ScanScreen() {
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     if (scannedRef.current) return;
+
     scannedRef.current = true;
     setScanned(true);
     console.log('Scanned data:', data);
+
+    if (isHuntScan) {
+      // Hunt scan mode: pass QR code back to HuntScreen
+      router.push({
+        pathname: '/huntscreen',
+        params: { huntId: paramHuntId, qrCode: data },
+      });
+      return;
+    }
 
     try {
       // Prefix-based type detection
@@ -166,10 +182,8 @@ export default function ScanScreen() {
       console.log('Regular scan:', data);
       const response = await QRService.scanQRCode(data);
       console.log('response:', response);
-      console.log('valid loc:', response?.location_valid);
 
       let message = 'This QR code is mysterious and unknown to the system.';
-
       if (!response?.location_valid) {
         message =
           'You are not in the correct location to get the rewards for this code.';
@@ -179,6 +193,14 @@ export default function ScanScreen() {
             message = `You have found ${response?.reward_data?.item_name}.`;
             break;
           case 'transportation':
+            if (response?.reward_data?.hunt_id) {
+              setHuntId(response.reward_data.hunt_id);
+              setScanMessage(
+                'Start Scavenger Hunt?\nEstimated time: ~20 min\nDistance: ~1 km'
+              );
+              setModalVisible(true);
+              return; // Exit early for modal
+            }
             message = `You have been transported to ${response?.reward_data?.destination}.`;
             break;
           case 'encounter':
@@ -187,7 +209,6 @@ export default function ScanScreen() {
             break;
         }
       }
-
       setScanMessage(message);
       showModal();
     } catch (error) {
@@ -196,6 +217,27 @@ export default function ScanScreen() {
       showModal();
     }
   };
+
+  const startHunt = () => {
+    if (huntId) {
+      router.push({ pathname: '/huntscreen', params: { huntId } });
+      setModalVisible(false);
+      setHuntId(null);
+    }
+  };
+
+  //** This is a hack to avoid implementing a state manager for now! */
+  const [huntScanCallback, setHuntScanCallback] = useState<
+    ((qrCode: string) => void) | null
+  >(null);
+
+  const handleHuntScan = (qrCode: string) => {
+    if (huntScanCallback) {
+      huntScanCallback(qrCode);
+      setHuntScanCallback(null);
+    }
+  };
+  //** This is a hack to avoid implementing a state manager for now! */
 
   const showModal = () => {
     setModalVisible(true);
@@ -251,9 +293,23 @@ export default function ScanScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalText}>{scanMessage}</Text>
-            <TouchableOpacity style={styles.button} onPress={closeModal}>
-              <Text style={styles.buttonText}>OK</Text>
-            </TouchableOpacity>
+            {huntId ? (
+              <>
+                <TouchableOpacity style={styles.button} onPress={startHunt}>
+                  <Text style={styles.buttonText}>Go</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={closeModal}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={styles.button} onPress={closeModal}>
+                <Text style={styles.buttonText}>OK</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -317,5 +373,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  cancelButton: {
+    backgroundColor: '#dc3545',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
   },
 });

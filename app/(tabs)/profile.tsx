@@ -14,15 +14,20 @@ import ScanItem from '@/src/components/ScanItem';
 
 export default function ProfileScreen() {
   const [player, setPlayer] = useState<any | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
   const { scans, total, loading, fetchScans } = useScanHistory();
 
   useEffect(() => {
+    setPage(1);
     fetchScans(true); // Initial fetch, reset state
   }, [fetchScans]);
 
   const loadMore = () => {
-    if (!loading && scans.length < total) {
+    if (!loading && !loadingMore && scans.length < total) {
+      setLoadingMore(true);
       fetchScans(); // Fetch next page
+      setTimeout(() => setLoadingMore(false), 1000); // 1-second debounce
     }
   };
 
@@ -30,7 +35,7 @@ export default function ProfileScreen() {
     const loadPlayer = async () => {
       const player_data = await AuthService.getPlayerData();
       setPlayer(player_data);
-      console.log('playerdata:', player_data);
+      //console.log('playerdata:', player_data);
     };
     loadPlayer();
   }, []);
@@ -78,15 +83,16 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.historyContainer}>
-        <Text style={styles.historyHeader}>Scan History</Text>
         <FlatList
           data={scans}
           renderItem={({ item }) => <ScanItem scan={item} />}
           keyExtractor={(item, index) => `${item.scan_time}-${index}`}
           onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.2}
           ListFooterComponent={
-            loading ? <ActivityIndicator size="large" color="#4c669f" /> : null
+            loading || loadingMore ? (
+              <ActivityIndicator size="large" color="#4c669f" />
+            ) : null
           }
           showsVerticalScrollIndicator={true}
           horizontal={false}

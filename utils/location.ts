@@ -17,3 +17,26 @@ export const calculateDistance = (
 
   return R * c; // Distance in meters
 };
+
+export function calculateBearing(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const toRadians = (deg: number) => (deg * Math.PI) / 180;
+  const toDegrees = (rad: number) => (rad * 180) / Math.PI;
+
+  const dLon = toRadians(lon2 - lon1);
+  const lat1Rad = toRadians(lat1);
+  const lat2Rad = toRadians(lat2);
+
+  const y = Math.sin(dLon) * Math.cos(lat2Rad);
+  const x =
+    Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+    Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+
+  let bearing = toDegrees(Math.atan2(y, x));
+  bearing = (bearing + 360) % 360; // Ensure it’s 0-360 degrees
+  return bearing;
+}

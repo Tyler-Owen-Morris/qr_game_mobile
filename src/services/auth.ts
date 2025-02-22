@@ -126,7 +126,7 @@ class AuthService {
       const formData = new URLSearchParams();
       formData.append('username', username);
       formData.append('password', password);
-      console.log('username,pass', username, password);
+      // console.log('username,pass', username, password);
 
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -145,7 +145,7 @@ class AuthService {
 
       //get the user information
       const my_user_data = await this.fetchUserData();
-      console.log('my user:', my_user_data);
+      // console.log('my user:', my_user_data);
       this.setPlayerData(my_user_data);
     } catch (error) {
       console.error('Error logging in:', error);
