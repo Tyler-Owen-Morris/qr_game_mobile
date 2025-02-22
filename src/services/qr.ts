@@ -10,6 +10,7 @@ export interface QRScanResponse {
   location_valid?: boolean;
   encounter_type?: string;
   reward_data?: any;
+  hunt_status?: string;
 }
 
 export interface PeerQRResponse {
@@ -72,6 +73,7 @@ class QRService {
     longitude: number
   ): Promise<PeerQRResponse> {
     const token = AuthService.getToken();
+    console.log('token:', token);
     if (!token) {
       throw new Error('Unauthorized: No auth token found');
     }

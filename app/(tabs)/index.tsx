@@ -14,6 +14,8 @@ import AuthService from '../../src/services/auth';
 import QRService from '@/src/services/qr';
 import { router, useLocalSearchParams } from 'expo-router';
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+
 export default function ScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState<boolean>(false);
@@ -195,11 +197,26 @@ export default function ScanScreen() {
           case 'transportation':
             if (response?.reward_data?.hunt_id) {
               setHuntId(response.reward_data.hunt_id);
-              setScanMessage(
-                'Start Scavenger Hunt?\nEstimated time: ~20 min\nDistance: ~1 km'
-              );
+              if (response.hunt_status === 'active') {
+                setScanMessage(
+                  'Resume Scavenger Hunt?\nEstimated time: ~20 min\nDistance: ~1 km'
+                );
+              } else if (response.hunt_status === 'completed') {
+                // setScanMessage('This hunt is already completed!');
+                setScanMessage(
+                  'Restart completed Scavenger Hunt?\nEstimated time: ~20 min\nDistance: ~1 km'
+                );
+              } else if (response.hunt_status === 'abandoned') {
+                setScanMessage(
+                  'Restart abandoned Scavenger Hunt?\nEstimated time: ~20 min\nDistance: ~1 km'
+                );
+              } else {
+                setScanMessage(
+                  'Start Scavenger Hunt?\nEstimated time: ~20 min\nDistance: ~1 km'
+                );
+              }
               setModalVisible(true);
-              return; // Exit early for modal
+              return;
             }
             message = `You have been transported to ${response?.reward_data?.destination}.`;
             break;
@@ -218,8 +235,23 @@ export default function ScanScreen() {
     }
   };
 
-  const startHunt = () => {
+  const startHunt = async () => {
     if (huntId) {
+      // Notify the server the hunt is started:
+      try {
+        const token = await AuthService.getToken();
+        const response = await fetch(`${API_URL}/hunts/start/${huntId}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error('Failed to start/resume hunt');
+        router.push({ pathname: '/huntscreen', params: { huntId } });
+      } catch (error) {
+        console.error('Error starting hunt:', error);
+        setScanMessage('Failed to start/resume hunt. Try again.');
+        setModalVisible(true);
+        return; // Keep modal open on error
+      }
       router.push({ pathname: '/huntscreen', params: { huntId } });
       setModalVisible(false);
       setHuntId(null);

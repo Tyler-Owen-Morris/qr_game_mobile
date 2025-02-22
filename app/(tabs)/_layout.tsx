@@ -28,14 +28,18 @@ export default function TabLayout() {
             },
           }),
         },
-        tabBarBackground: Platform.OS === 'ios' ? () => (
-          <BlurView
-            tint="light"
-            intensity={95}
-            style={StyleSheet.absoluteFill}
-          />
-        ) : undefined,
-      }}>
+        tabBarBackground:
+          Platform.OS === 'ios'
+            ? () => (
+                <BlurView
+                  tint="light"
+                  intensity={95}
+                  style={StyleSheet.absoluteFill}
+                />
+              )
+            : undefined,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -48,9 +52,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="generate"
         options={{
-          title: 'Generate',
+          title: 'Pair',
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="qr-code" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="hunts"
+        options={{
+          title: 'Hunts',
+          tabBarIcon: ({ size, color }) => (
+            <Ionicons name="disc" size={size} color={color} />
           ),
         }}
       />

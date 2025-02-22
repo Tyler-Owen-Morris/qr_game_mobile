@@ -37,7 +37,7 @@ export default function HuntScreen() {
       setLoading(true);
       try {
         const token = await AuthService.getToken();
-        const response = await fetch(`${API_URL}/hunts/${huntId}`, {
+        const response = await fetch(`${API_URL}/hunts/hunt/${huntId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) throw new Error('Failed to fetch hunt');
@@ -202,7 +202,7 @@ export default function HuntScreen() {
             style={[styles.scanButton, { backgroundColor: '#ff4444' }]} // Red color to indicate cancel
             onPress={cancelHunt}
           >
-            <Text style={styles.buttonText}>Cancel Hunt</Text>
+            <Text style={styles.buttonText}>Resume Later</Text>
           </TouchableOpacity>
         </>
       ) : (
