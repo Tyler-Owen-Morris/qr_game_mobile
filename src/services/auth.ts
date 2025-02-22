@@ -153,6 +153,31 @@ class AuthService {
     }
   }
 
+  static async reauthenticate(): Promise<void> {
+    try {
+      const credentials = await this.loadStoredCredentials();
+      if (!credentials || !credentials.username || !credentials.password) {
+        throw new Error('No stored credentials available');
+      }
+
+      await this.login(credentials.username, credentials.password);
+    } catch (error) {
+      console.error('Error re-authenticating:', error);
+      await this.logout(); // Clear credentials on failure
+      throw error;
+    }
+  }
+
+  static async logout(): Promise<void> {
+    this.token = null;
+    this.player_data = null;
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.TOKEN,
+      STORAGE_KEYS.USERNAME,
+      STORAGE_KEYS.PASSWORD,
+    ]);
+  }
+
   static async fetchUserData(): Promise<any> {
     try {
       const token = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
@@ -164,6 +189,16 @@ class AuthService {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      if (response.status === 401) {
+        try {
+          await this.reauthenticate();
+          // After re-auth, retry the original function (passed as retryFn)
+          return await this.fetchUserData();
+        } catch (error) {
+          console.error('Re-authentication failed:', error);
+        }
+      }
 
       if (!response.ok) throw new Error('Failed to fetch user data');
 
@@ -195,6 +230,15 @@ class AuthService {
       console.log(JSON.stringify({ session_id: sessionId }));
       console.log('qr-login-complete response:', response.status);
 
+      if (response.status === 401) {
+        try {
+          await this.reauthenticate();
+          // After re-auth, retry the original function (passed as retryFn)
+          return await this.completeQRLogin(sessionId);
+        } catch (error) {
+          console.error('Re-authentication failed:', error);
+        }
+      }
       if (!response.ok) {
         throw new Error('QR login completion failed');
       }

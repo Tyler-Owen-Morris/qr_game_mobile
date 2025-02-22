@@ -47,6 +47,16 @@ class QRService {
         }),
       });
 
+      if (response.status === 401) {
+        try {
+          await AuthService.reauthenticate();
+          // After re-auth, retry the original function (passed as retryFn)
+          return await this.scanQRCode(qrCode);
+        } catch (error) {
+          console.error('Re-authentication failed:', error);
+        }
+      }
+
       if (!response.ok) {
         throw new Error(`QR scan failed with status: ${response.status}`);
       }
@@ -76,6 +86,16 @@ class QRService {
           location: { latitude, longitude },
         }),
       });
+
+      if (response.status === 401) {
+        try {
+          await AuthService.reauthenticate();
+          // After re-auth, retry the original function (passed as retryFn)
+          return await this.generatePeerQR(latitude, longitude);
+        } catch (error) {
+          console.error('Re-authentication failed:', error);
+        }
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -111,6 +131,16 @@ class QRService {
           longitude,
         }),
       });
+
+      if (response.status === 401) {
+        try {
+          await AuthService.reauthenticate();
+          // After re-auth, retry the original function (passed as retryFn)
+          return await this.validatePeerQR(qrCode, latitude, longitude);
+        } catch (error) {
+          console.error('Re-authentication failed:', error);
+        }
+      }
 
       if (!response.ok) {
         throw new Error(

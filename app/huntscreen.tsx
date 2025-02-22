@@ -206,7 +206,17 @@ export default function HuntScreen() {
           </TouchableOpacity>
         </>
       ) : (
-        <Text style={styles.info}>Hunt Completed!</Text>
+        <>
+          <Text style={[styles.info, { fontSize: 34, marginVertical: 100 }]}>
+            Hunt Completed!
+          </Text>
+          <TouchableOpacity
+            style={[styles.scanButton, { backgroundColor: '#ff4444' }]} // Red color to indicate cancel
+            onPress={cancelHunt}
+          >
+            <Text style={styles.buttonText}>Confirm</Text>
+          </TouchableOpacity>
+        </>
       )}
       <Modal animationType="slide" transparent={true} visible={modalVisible}>
         <View style={styles.modalContainer}>
@@ -239,7 +249,7 @@ const HuntScanner = ({
   onScan: (data: string) => void;
   onClose: () => void;
 }) => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>();
+  const [hasPermission, setHasPermission] = useState<boolean | null>(true);
   //   const [scanned, setScanned] = useState<boolean>(false);
   const scannedRef = useRef(false);
 
@@ -313,11 +323,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 20,
+    textAlign: 'center',
   },
   info: {
     fontSize: 16,
     color: '#555',
     marginVertical: 10,
+    textAlign: 'center',
   },
   scanButton: {
     backgroundColor: '#4c669f',

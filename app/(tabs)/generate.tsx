@@ -97,6 +97,7 @@ export default function GenerateScreen() {
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
+      console.log('location permission granted');
       if (status !== 'granted') {
         throw new Error('Location permission denied');
       }
@@ -110,6 +111,7 @@ export default function GenerateScreen() {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       };
+      console.log('location obtained', coords);
 
       const response: PeerQRResponse = await QRService.generatePeerQR(
         coords.latitude,
