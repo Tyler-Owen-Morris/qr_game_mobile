@@ -12,6 +12,8 @@ import WebSocketService from '../../src/services/websocket';
 import QRService, { PeerQRResponse } from '../../src/services/qr';
 import { calculateDistance } from '../../utils/location';
 import { Ionicons } from '@expo/vector-icons';
+import AuthService from '@/src/services/auth';
+import { router } from 'expo-router';
 
 export default function GenerateScreen() {
   const [qrData, setQrData] = useState<string>('');
@@ -35,16 +37,28 @@ export default function GenerateScreen() {
     if (Platform.OS !== 'web') {
       WebSocketService.connect();
       const handleMessage = (data: any) => {
+        console.log('socketmsg', data.event, data.message);
         if (data.event === 'peer_pairing_success') {
           setPeerStatus(data.message || 'Peer connection successful!');
-          setTimeout(() => setPeerStatus(''), 3000);
+          setTimeout(() => {
+            setPeerStatus('');
+            const player_data = AuthService.getPlayerData();
+            if (player_data != null) {
+              const player1Id = player_data.id;
+              console.log('Navigating to MiniGameScreen from:', player1Id);
+              router.replace({
+                pathname: '/minigamescreen',
+                params: { player1Id, isPlayer1: 'true' },
+              });
+            }
+          }, 3000);
         }
       };
       WebSocketService.addMessageListener(handleMessage);
 
       return () => {
         WebSocketService.removeMessageListener(handleMessage);
-        WebSocketService.disconnect();
+        // WebSocketService.disconnect();
       };
     }
   }, []);

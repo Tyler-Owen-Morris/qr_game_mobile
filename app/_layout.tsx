@@ -28,6 +28,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="huntscreen" />
+        <Stack.Screen name="minigamescreen" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

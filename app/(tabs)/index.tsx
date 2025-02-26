@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AuthService from '../../src/services/auth';
 import QRService from '@/src/services/qr';
 import { router, useLocalSearchParams } from 'expo-router';
+import WebSocketService from '@/src/services/websocket';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -162,6 +163,20 @@ export default function ScanScreen() {
 
       if (response.status === 'success') {
         setScanMessage(`Match Success!\n\n${response.message || 'unknown'}.`);
+        let player1Id = response.matched_player_id;
+
+        const player_data = AuthService.getPlayerData();
+        if (player_data != null) {
+          let player2Id = player_data.id;
+          setTimeout(() => {
+            router.replace({
+              pathname: '/minigamescreen',
+              params: { player1Id, player2Id, isPlayer1: 'false' },
+            });
+          }, 4000);
+        } else {
+          console.error('Failed to load my own user');
+        }
       } else {
         setScanMessage(response.message || 'Failed to match peer.');
       }

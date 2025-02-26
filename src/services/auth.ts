@@ -9,6 +9,11 @@ const STORAGE_KEYS = {
   TOKEN: '@auth_token',
 };
 
+interface StoredCredentials {
+  username: string;
+  password: string;
+}
+
 export interface LoginResponse {
   access_token: string;
   token_type: string;
@@ -19,9 +24,30 @@ export interface QRLoginResponse {
   message?: string;
 }
 
+interface PlayerData {
+  id: string;
+  username: string;
+  score: number;
+  level: number;
+  created_at: string; // ISO timestamp
+  scan_counts: {
+    total: number;
+    discovery: number;
+    peers: number;
+  };
+  recent_scans: ScanRecord[];
+}
+
+interface ScanRecord {
+  qr_code_id: string | null;
+  scan_time: string; // ISO timestamp
+  success: boolean;
+  scan_type: 'peer' | 'discovery'; // If there are other types, update accordingly
+}
+
 class AuthService {
   private static token: string | null = null;
-  private static player_data: object | null = null;
+  private static player_data: PlayerData | null = null;
 
   static getToken(): string | null {
     return this.token;
@@ -35,18 +61,15 @@ class AuthService {
     });
   }
 
-  static getPlayerData(): object | null {
+  static getPlayerData(): PlayerData | null {
     return this.player_data;
   }
 
-  static setPlayerData(data: object): void {
+  static setPlayerData(data: PlayerData): void {
     this.player_data = data;
   }
 
-  static async loadStoredCredentials(): Promise<{
-    username: string;
-    password: string;
-  } | null> {
+  static async loadStoredCredentials(): Promise<StoredCredentials | null> {
     try {
       const [username, password] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USERNAME),
@@ -144,7 +167,7 @@ class AuthService {
       this.setToken(data.access_token);
 
       //get the user information
-      const my_user_data = await this.fetchUserData();
+      const my_user_data: PlayerData = await this.fetchUserData();
       // console.log('my user:', my_user_data);
       this.setPlayerData(my_user_data);
     } catch (error) {
@@ -178,7 +201,7 @@ class AuthService {
     ]);
   }
 
-  static async fetchUserData(): Promise<any> {
+  static async fetchUserData(): Promise<PlayerData> {
     try {
       const token = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
       if (!token) throw new Error('No auth token found');
@@ -208,7 +231,7 @@ class AuthService {
       return userData;
     } catch (error) {
       console.error('Error fetching user data:', error);
-      return null;
+      throw error;
     }
   }
 
